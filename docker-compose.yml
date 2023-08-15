@@ -1,0 +1,23 @@
+version: "2.4"
+
+services:
+  api:
+    image: registry.gitlab.com/liveartdevteam/sandbox/trx0/admin-api-boilerplate:0.0.2
+    init: true
+    restart: on-failure:5
+    ports:
+      - "8050:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_MONGO_URL=mongodb://mongo:27017/admin
+    cpus: 0.4
+    mem_limit: 300m
+    mem_reservation: 100m
+  mongo:
+    image: mongo:4
+    environment:
+      - MONGO_INITDB_DATABASE=admin
+    volumes:
+      - ./mongo:/data/db
+    ports:
+      - "8051:27017"
