@@ -17,6 +17,13 @@ export class Product extends Entity {
   })
   name: string;
 
+  @property({
+    type: 'boolean',
+    default: false,
+    required: true,
+  })
+  hidden: boolean;
+
   @belongsTo(() => ProductCategory)
   categoryId: string;
 
