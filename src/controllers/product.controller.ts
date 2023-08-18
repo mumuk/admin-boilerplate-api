@@ -15,7 +15,7 @@ import {
   put,
   del,
   requestBody,
-  response,
+  response, HttpErrors,
 } from '@loopback/rest';
 import {Product} from '../models';
 import {ProductRepository} from '../repositories';
@@ -74,6 +74,28 @@ export class ProductController {
     @param.filter(Product) filter?: Filter<Product>,
   ): Promise<Product[]> {
     return this.productRepository.find(filter);
+  }
+
+  @get('/visible-products')
+  @response(200, {
+    description: 'Array of visible Product model instances',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(Product, {includeRelations: true}),
+        },
+      },
+    },
+  })
+  async findVisible(): Promise<Product[]> {
+    try {
+      return await this.productRepository.find({where: {hidden: false}});
+    } catch (e) {
+      throw new HttpErrors.InternalServerError(
+        'Error retrieving visible products',
+      );
+    }
   }
 
   @patch('/products')
