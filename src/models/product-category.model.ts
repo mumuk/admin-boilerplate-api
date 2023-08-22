@@ -16,6 +16,13 @@ export class ProductCategory extends Entity {
   })
   name: string;
 
+  @property.array(String, {
+    itemType: 'string',
+    required: false,
+    mongodb: {dataType: 'ObjectID'},
+  })
+  tagIds?: string[];
+
   @belongsTo(() => ProductCategory)
   categoryId: string;
 
