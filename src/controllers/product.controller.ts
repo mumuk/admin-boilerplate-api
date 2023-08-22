@@ -204,49 +204,4 @@ export class ProductController {
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.productRepository.deleteById(id);
   }
-
-  @patch('/products/{productId}/tags/{tagId}', {
-    responses: {
-      '204': {
-        description: 'Product PATCH success',
-      },
-    },
-  })
-  async addTagToProduct(
-    @param.path.string('productId') productId: string,
-    @param.path.string('tagId') tagId: string,
-  ): Promise<void> {
-    const product = await this.productRepository.findById(productId);
-    if (product.tagIds?.includes(tagId)) {
-      throw new HttpErrors.BadRequest(`Product already has the tag with id ${tagId}`);
-    }
-
-    if (!product.tagIds) {
-      product.tagIds = [];
-    }
-    product.tagIds.push(tagId);
-    await this.productRepository.updateById(productId, product);
-  }
-
-  @del('/products/{productId}/tags/{tagId}', {
-    responses: {
-      '204': {
-        description: 'Tag removed from Product',
-      },
-    },
-  })
-  async removeTagFromProduct(
-    @param.path.string('productId') productId: string,
-    @param.path.string('tagId') tagId: string,
-  ): Promise<void> {
-    const product = await this.productRepository.findById(productId);
-
-    if (!product.tagIds?.includes(tagId)) {
-      throw new HttpErrors.NotFound(`Tag with id ${tagId} not found in product ${productId}`);
-    }
-
-    product.tagIds = product.tagIds.filter(tag => tag !== tagId);
-    await this.productRepository.updateById(productId, product);
-  }
-
 }
