@@ -1,6 +1,7 @@
 import {Entity, belongsTo, model, property} from '@loopback/repository';
 import {ProductCategory} from './product-category.model';
 
+
 @model({settings: {strict: false}})
 export class Product extends Entity {
   @property({
@@ -23,6 +24,13 @@ export class Product extends Entity {
     required: true,
   })
   hidden: boolean;
+
+  @property.array(String, {
+    itemType: 'string',
+    required: false,
+    mongodb: {dataType: 'ObjectID'},
+  })
+  tagIds?: string[];
 
   @belongsTo(() => ProductCategory)
   categoryId: string;

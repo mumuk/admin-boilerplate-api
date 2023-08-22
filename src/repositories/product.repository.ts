@@ -9,7 +9,7 @@ export class ProductRepository extends DefaultCrudRepository<
   ProductRelations
 > {
   constructor(
-    @inject('datasources.mongo') dataSource: MongoDataSource,
+    @inject('datasources.mongo') dataSource: MongoDataSource
   ) {
     super(Product, dataSource);
   }
