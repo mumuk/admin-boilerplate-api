@@ -45,6 +45,22 @@ docker exec -i mongodb sh -c 'mongorestore /dump'
 
 where `mongodb` is container name from [Run database](#run-database)
 
+## Migrate db to new version
+
+```sh
+
+ts-node migrate.ts
+
+Warning!
+You must have `ts-node` installed globally - npm install -g ts-node 
+or in devDependencies npm install --save-dev ts-node
+
+If you have TS error like you need to add   "exclude": ["migrate.ts"] to tsconfig.json
+
+```
+
+```
+
 ## Run the application
 
 ```sh
