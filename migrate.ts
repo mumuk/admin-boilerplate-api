@@ -23,6 +23,11 @@ async function migrate() {
       { $set: { tagIds: [] } }
     );
 
+    await products.updateMany(
+      { thumbnail: { $exists: false } },
+      { $set: { thumbnail: '' } }
+    );
+
     console.log("Migration completed");
   } finally {
     await client.close();

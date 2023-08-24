@@ -19,6 +19,16 @@ export class Product extends Entity {
   name: string;
 
   @property({
+    type: 'string',
+    required: false,
+    default: '',
+    jsonSchema: {
+      maxLength: 255,
+    },
+  })
+  thumbnail: string;
+
+  @property({
     type: 'boolean',
     default: false,
     required: true,
