@@ -1,26 +1,26 @@
+import {Count, CountSchema, Filter, FilterExcludingWhere, repository, Where} from '@loopback/repository';
 import {
-  Count,
-  CountSchema,
-  Filter,
-  FilterExcludingWhere,
-  repository,
-  Where,
-} from '@loopback/repository';
-import {
-  post,
-  param,
+  del,
   get,
   getModelSchemaRef,
+  HttpErrors,
+  param,
   patch,
+  post,
   put,
-  del,
+  Request,
   requestBody,
-  response, HttpErrors,
+  Response,
+  response,
+  RestBindings,
 } from '@loopback/rest';
 import {Product, ProductWithRelations} from '../models';
 import {ProductRepository, TagRepository} from '../repositories';
+import {inject} from '@loopback/core';
 
-
+import {FileUploadService} from '../utils/fileUpload.service';
+import fs, {promises as fsPromises} from 'fs';
+import {join, relative} from 'path';
 
 export class ProductController {
   constructor(
@@ -83,9 +83,9 @@ export class ProductController {
       product.tags = await this.tagRepository.find({
         where: {
           _id: {
-            in: product.tagIds
-          }
-        }
+            in: product.tagIds,
+          },
+        },
       });
     }));
     return products;
@@ -110,9 +110,9 @@ export class ProductController {
         product.tags = await this.tagRepository.find({
           where: {
             _id: {
-              in: product.tagIds
-            }
-          }
+              in: product.tagIds,
+            },
+          },
         });
       }));
       return products;
@@ -153,16 +153,16 @@ export class ProductController {
   })
   async findById(
     @param.path.string('id') id: string,
-    @param.filter(Product, {exclude: 'where'}) filter?: FilterExcludingWhere<Product>
+    @param.filter(Product, {exclude: 'where'}) filter?: FilterExcludingWhere<Product>,
   ): Promise<ProductWithRelations> {
     const product = await this.productRepository.findById(id, filter);
 
     product.tags = await this.tagRepository.find({
       where: {
         _id: {
-          in: product.tagIds
-        }
-      }
+          in: product.tagIds,
+        },
+      },
     });
 
     return product;
@@ -205,48 +205,85 @@ export class ProductController {
     await this.productRepository.deleteById(id);
   }
 
-  @patch('/products/{productId}/tags/{tagId}', {
-    responses: {
-      '204': {
-        description: 'Product PATCH success',
+  @post('/products/{id}/thumbnail')
+  @response(200, {
+    description: 'Product thumbnail upload',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            filename: {type: 'string'},
+            path: {type: 'string'},
+          },
+        },
       },
     },
   })
-  async addTagToProduct(
-    @param.path.string('productId') productId: string,
-    @param.path.string('tagId') tagId: string,
-  ): Promise<void> {
-    const product = await this.productRepository.findById(productId);
-    if (product.tagIds?.includes(tagId)) {
-      throw new HttpErrors.BadRequest(`Product already has the tag with id ${tagId}`);
+  async uploadThumbnail(
+    @param.path.string('id') id: string,
+    @inject(RestBindings.Http.REQUEST) req: Request,
+    @inject(RestBindings.Http.RESPONSE) res: Response,
+  ): Promise<{filename: string, path: string}> {
+
+    const fileUploadService = new FileUploadService();
+    const file = await fileUploadService.uploadFile(req, res);
+
+    if (!file) {
+      throw new HttpErrors.BadRequest('File not uploaded');
     }
 
-    if (!product.tagIds) {
-      product.tagIds = [];
+    const baseDir = join(__dirname, '../../public');
+    const relativePath = relative(baseDir, file.path);
+
+    const productToUpdate = await this.productRepository.findById(id);
+    if (!productToUpdate) {
+      throw new HttpErrors.NotFound(`Product with id ${id} not found`);
     }
-    product.tagIds.push(tagId);
-    await this.productRepository.updateById(productId, product);
+
+    // Получить текущий путь к файлу миниатюры
+    const oldThumbnailPath = productToUpdate.thumbnail;
+
+    productToUpdate.thumbnail = relativePath;
+    await this.productRepository.updateById(id, productToUpdate);
+
+    const absoluteOldThumbnailPath = join(__dirname, '../../public', oldThumbnailPath);
+    // Если старый путь к файлу миниатюры существует, удалить его
+    if (fs.existsSync(absoluteOldThumbnailPath)) {
+      try {
+        fs.unlinkSync(absoluteOldThumbnailPath);
+        console.log('File deleted successfully:', oldThumbnailPath);
+      } catch (e) {
+        console.log('Error deleting file:', oldThumbnailPath);
+      }
+    }
+    return {filename: file.filename, path: file.path};
   }
 
-  @del('/products/{productId}/tags/{tagId}', {
+  @get('/uploads/{filename}', {
     responses: {
-      '204': {
-        description: 'Tag removed from Product',
+      '200': {
+        description: 'Uploaded File',
+        content: {
+          'image/jpeg': {schema: {type: 'string', format: 'binary'}},
+          'image/png': {schema: {type: 'string', format: 'binary'}},
+        },
       },
     },
   })
-  async removeTagFromProduct(
-    @param.path.string('productId') productId: string,
-    @param.path.string('tagId') tagId: string,
-  ): Promise<void> {
-    const product = await this.productRepository.findById(productId);
-
-    if (!product.tagIds?.includes(tagId)) {
-      throw new HttpErrors.NotFound(`Tag with id ${tagId} not found in product ${productId}`);
+  async getUploadedFile(
+    @param.path.string('filename') filename: string,
+  ): Promise<Buffer> {
+    const absolutePath = join(__dirname, '../../public/uploads', filename);
+    if (!fs.existsSync(absolutePath)) {
+      throw new HttpErrors.NotFound(`File ${filename} not found`);
     }
 
-    product.tagIds = product.tagIds.filter(tag => tag !== tagId);
-    await this.productRepository.updateById(productId, product);
+    try {
+      return await fsPromises.readFile(absolutePath);
+    } catch (error) {
+      throw new HttpErrors.NotFound(`Error reading file ${filename}`);
+    }
   }
 
 }
