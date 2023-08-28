@@ -224,7 +224,7 @@ export class ProductController {
     @param.path.string('id') id: string,
     @inject(RestBindings.Http.REQUEST) req: Request,
     @inject(RestBindings.Http.RESPONSE) res: Response,
-  ): Promise<{filename: string, path: string}> {
+  ): Promise<{ filename: string, path: string }> {
 
     const fileUploadService = new FileUploadService();
     const file = await fileUploadService.uploadFile(req, res);
@@ -241,13 +241,12 @@ export class ProductController {
       throw new HttpErrors.NotFound(`Product with id ${id} not found`);
     }
 
-
     const oldThumbnailPath = productToUpdate.thumbnail;
 
     productToUpdate.thumbnail = relativePath;
     await this.productRepository.updateById(id, productToUpdate);
 
-    const absoluteOldThumbnailPath = join(__dirname, '../../public', oldThumbnailPath);
+    const absoluteOldThumbnailPath = join(baseDir, oldThumbnailPath);
 
     if (fs.existsSync(absoluteOldThumbnailPath)) {
       try {
@@ -274,6 +273,7 @@ export class ProductController {
   async getUploadedFile(
     @param.path.string('filename') filename: string,
   ): Promise<Buffer> {
+
     const absolutePath = join(__dirname, '../../public/uploads', filename);
     if (!fs.existsSync(absolutePath)) {
       throw new HttpErrors.NotFound(`File ${filename} not found`);
