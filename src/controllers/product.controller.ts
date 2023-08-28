@@ -241,14 +241,14 @@ export class ProductController {
       throw new HttpErrors.NotFound(`Product with id ${id} not found`);
     }
 
-    // Получить текущий путь к файлу миниатюры
+
     const oldThumbnailPath = productToUpdate.thumbnail;
 
     productToUpdate.thumbnail = relativePath;
     await this.productRepository.updateById(id, productToUpdate);
 
     const absoluteOldThumbnailPath = join(__dirname, '../../public', oldThumbnailPath);
-    // Если старый путь к файлу миниатюры существует, удалить его
+
     if (fs.existsSync(absoluteOldThumbnailPath)) {
       try {
         fs.unlinkSync(absoluteOldThumbnailPath);
