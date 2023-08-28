@@ -286,4 +286,37 @@ export class ProductController {
     }
   }
 
+  @del('/products/{id}/thumbnail')
+  @response(204, {
+    description: 'Product thumbnail deleted',
+  })
+  async deleteThumbnail(
+    @param.path.string('id') id: string
+  ): Promise<void> {
+    const productToUpdate = await this.productRepository.findById(id);
+
+    if (!productToUpdate) {
+      throw new HttpErrors.NotFound(`Product with id ${id} not found`);
+    }
+
+    const oldThumbnailPath = productToUpdate.thumbnail;
+    const baseDir = join(__dirname, '../../public');
+    const absoluteOldThumbnailPath = join(baseDir, oldThumbnailPath);
+
+    if (fs.existsSync(absoluteOldThumbnailPath)) {
+      try {
+        fs.unlinkSync(absoluteOldThumbnailPath);
+        console.log('File deleted successfully:', oldThumbnailPath);
+      } catch (e) {
+        console.log('Error deleting file:', oldThumbnailPath);
+        throw new HttpErrors.InternalServerError(`Error deleting file: ${oldThumbnailPath}`);
+      }
+    } else {
+      throw new HttpErrors.NotFound(`Thumbnail file not found: ${oldThumbnailPath}`);
+    }
+
+    productToUpdate.thumbnail = '';
+    await this.productRepository.updateById(id, productToUpdate);
+  }
+
 }
